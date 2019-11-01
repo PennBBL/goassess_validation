@@ -1,0 +1,163 @@
+### This script identifies bblids that violate the skip logic of the GOASSESS battery
+### 
+### Ellyn Butler
+### March 14, 2019 - present
+
+# load packages 
+library('car')
+library('dplyr')
+
+# Load the data 
+#df <- read.csv("/home/butellyn/parentchild_psychopathology/data/GOA_itemwise_for_reporter_agreement_noPHI.csv") 
+#demo <- read.csv("/home/butellyn/age_prediction/data/n9498_demographics_go1_20161212.csv")
+
+# Check that answers make sense for Middle Proband
+#depcols <- colnames(df)[grepl("DEP", colnames(df))][c(1:7, 10:20)]
+#dep_df <- df[df$INTERVIEW_TYPE == "MP",c("PROBAND_BBLID", depcols)]
+#names(dep_df)[names(dep_df) == 'PROBAND_BBLID'] <- 'bblid'
+
+#rownames(dep_df) <- 1:nrow(dep_df)
+
+#df_coord <- read.csv("/home/tymoore/PNC_GO1_GOASSESSDataArchiveGENERAL_DATA_2015-07-14_1210.csv")
+
+
+
+	
+##### Remove BBLIDs from dataframe that are non-sensical, or modify their answers, and then remove subjects that still have missing values
+
+identifyBadDEP <- function(dep_df) {
+	depcols <- colnames(dep_df)[grepl("DEP", colnames(dep_df))]
+	for (depcol in depcols) { dep_df[,depcol] <- as.character(dep_df[,depcol]) }
+	dep_df$Mistake <- 0
+	for (i in 1:nrow(dep_df)) {
+		dep12 <- dep_df[i, c("DEP001", "DEP002")]
+		if ( !("1" %in% dep12) & !(dep_df[i, "DEP003"] %in% c(".", "9"))) { 
+			dep_df[i, "Mistake"] <- 1 
+			next
+		}
+		if (dep_df[i, "DEP004"] != "1" & !(dep_df[i, "DEP005"] %in% c(".", "9"))) { 
+			dep_df[i, "Mistake"] <- 1 
+			next
+		}
+		if (dep_df[i, "DEP006"] != "1" & !(dep_df[i, "DEP007"] %in% c(".", "9"))) { 
+			dep_df[i, "Mistake"] <- 1 
+			next
+		}
+		firstvec <- dep_df[i, c("DEP001", "DEP002", "DEP004", "DEP006")]
+		secondvec <- dep_df[i, c("DEP010", "DEP011")]
+		if (!("1" %in% firstvec) & ("1" %in% secondvec | "0" %in% secondvec)) { 
+			dep_df[i, "Mistake"] <- 1
+			next
+		}
+		thirdvec <- dep_df[i, c("DEP012", "DEP013", "DEP014", "DEP015", "DEP016", "DEP017", "DEP018", "DEP019", "DEP020")]
+		if (("." %in% secondvec | "9" %in% secondvec | "0" %in% secondvec) & ("1" %in% thirdvec | "0" %in% thirdvec)) { 
+			dep_df[i, "Mistake"] <- 1
+			next
+		}
+		fourthvec <- dep_df[i, c("DEP012", "DEP013", "DEP014", "DEP015", "DEP016", "DEP017")]
+		if ("1" %in% firstvec & secondvec[1] == "1" & secondvec[2] == "2" & !(1 %in% thirdvec) & (!(is.integer(dep_df[i, "DEP018"])) | !(is.integer(dep_df[i, "DEP019"])) | !(dep_df[i, "DEP020"] %in% c(".", 9)))) {
+			dep_df[i, "Mistake"] <- 1
+		}	
+	}
+	return(dep_df)
+}
+
+# Remove mistakes between these two
+
+fillInDEP <- function(dep_df) {
+	#dep_df$DEP001 <- recode(dep_df$DEP001, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP001 == '.', 'DEP001'] <- '0'
+	dep_df[dep_df$DEP001 == '9', 'DEP001'] <- '0'
+	#dep_df$DEP002 <- recode(dep_df$DEP002, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP002 == '.', 'DEP002'] <- '0'
+	dep_df[dep_df$DEP002 == '9', 'DEP002'] <- '0'	
+	#dep_df$DEP003 <- recode(dep_df$DEP003, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP003 == '.', 'DEP003'] <- '0'
+	dep_df[dep_df$DEP003 == '9', 'DEP003'] <- '0'
+	#dep_df$DEP004 <- recode(dep_df$DEP004, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP004 == '.', 'DEP004'] <- '0'
+	dep_df[dep_df$DEP004 == '9', 'DEP004'] <- '0'
+	#dep_df$DEP005 <- recode(dep_df$DEP005, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP005 == '.', 'DEP005'] <- '0'
+	dep_df[dep_df$DEP005 == '9', 'DEP005'] <- '0'
+	#dep_df$DEP006 <- recode(dep_df$DEP006, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP006 == '.', 'DEP006'] <- '0'
+	dep_df[dep_df$DEP006 == '9', 'DEP006'] <- '0'
+	#dep_df$DEP007 <- recode(dep_df$DEP007, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP007 == '.', 'DEP007'] <- '0'
+	dep_df[dep_df$DEP007 == '9', 'DEP007'] <- '0'
+	#dep_df$DEP010 <- recode(dep_df$DEP010, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP010 == '.', 'DEP010'] <- '0'
+	dep_df[dep_df$DEP010 == '9', 'DEP010'] <- '0'
+	#dep_df$DEP011 <- recode(dep_df$DEP011, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP011 == '.', 'DEP011'] <- '0'
+	dep_df[dep_df$DEP011 == '9', 'DEP011'] <- '0'
+	#dep_df$DEP012 <- recode(dep_df$DEP012, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP012 == '.', 'DEP012'] <- '0'
+	dep_df[dep_df$DEP012 == '9', 'DEP012'] <- '0'
+	#dep_df$DEP013 <- recode(dep_df$DEP013, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP013 == '.', 'DEP013'] <- '0'
+	dep_df[dep_df$DEP013 == '9', 'DEP013'] <- '0'
+	#dep_df$DEP014 <- recode(dep_df$DEP014, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP014 == '.', 'DEP014'] <- '0'
+	dep_df[dep_df$DEP014 == '9', 'DEP014'] <- '0'
+	#dep_df$DEP015 <- recode(dep_df$DEP015, "'.'='0'")
+	dep_df[dep_df$DEP015 == '.', 'DEP015'] <- '0'
+	#dep_df$DEP016 <- recode(dep_df$DEP016, "'.'='0'")
+	dep_df[dep_df$DEP016 == '.', 'DEP016'] <- '0'
+	dep_df[dep_df$DEP016 == '9', 'DEP016'] <- '0'
+	#dep_df$DEP017 <- recode(dep_df$DEP017, "'.'='0'")
+	dep_df[dep_df$DEP017 == '.', 'DEP017'] <- '0'
+	#dep_df$DEP018 <- recode(dep_df$DEP018, "'.'='0'")
+	dep_df[dep_df$DEP018 == '.', 'DEP018'] <- '0'
+	#dep_df$DEP019 <- recode(dep_df$DEP019, "'.'='0'")
+	dep_df[dep_df$DEP019 == '.', 'DEP019'] <- '0'
+	#dep_df$DEP020 <- recode(dep_df$DEP020, "'.'='0';'9'='0'")
+	dep_df[dep_df$DEP020 == '.', 'DEP020'] <- '0'
+	dep_df[dep_df$DEP020 == '9', 'DEP020'] <- '0'
+	return(dep_df)
+}
+
+remakeDEP <- function(dep_df, informant="proband") {
+	new_df <- data.frame(matrix(NA, nrow=nrow(dep_df), ncol=15))
+	colnames(new_df) <- c("bblid", "informant", "ITEM001", "ITEM002", "ITEM003", "ITEM004", "ITEM005", "ITEM006", "ITEM007", "ITEM008", "ITEM009", "ITEM010", "ITEM011", "ITEM012", "ITEM013")
+	new_df$bblid <- dep_df$bblid
+	new_df$informant <- informant
+	# ITEM001
+	new_df$ITEM001 <- dep_df$DEP001
+	# ITEM002
+	new_df$ITEM002 <- dep_df$DEP002
+	# ITEM003
+	new_df$ITEM003 <- dep_df$DEP004
+	# ITEM004
+	new_df$ITEM004 <- dep_df$DEP006
+	# ITEM005
+	new_df$ITEM005 <- dep_df$DEP012
+	# ITEM006
+	new_df$ITEM006 <- dep_df$DEP013
+	# ITEM007
+	new_df$ITEM007 <- dep_df$DEP014
+	# ITEM008
+	new_df$ITEM008 <- dep_df$DEP015
+	# ITEM009
+	new_df$ITEM009 <- dep_df$DEP016
+	# ITEM010
+	new_df$ITEM010 <- dep_df$DEP017
+	# ITEM011
+	new_df$ITEM011 <- dep_df$DEP018
+	# ITEM012
+	new_df$ITEM012 <- dep_df$DEP019
+	# ITEM013
+	new_df$ITEM013 <- dep_df$DEP020
+
+	return(new_df)
+}
+
+
+
+
+
+
+
+
+

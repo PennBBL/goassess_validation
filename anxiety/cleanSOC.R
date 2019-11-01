@@ -1,0 +1,113 @@
+### This script identifies bblids that violate the skip logic of the GOASSESS battery
+### 
+### Ellyn Butler
+### July 13, 2019 - present
+
+# load packages 
+#library('car')
+library('dplyr')
+
+# Load the data 
+#df <- read.csv("/home/butellyn/parentchild_psychopathology/data/GOA_itemwise_for_reporter_agreement_noPHI.csv") 
+#demo <- read.csv("/home/butellyn/age_prediction/data/n9498_demographics_go1_20161212.csv")
+
+# Check that answers make sense for Middle Proband
+#soccols <- colnames(df)[grepl("SOC", colnames(df))][c(1:7, 10, 12:14, 16, 20, 11)]
+#soc_df <- df[df$INTERVIEW_TYPE == "MP",c("PROBAND_BBLID", soccols)]
+#names(soc_df)[names(soc_df) == 'PROBAND_BBLID'] <- 'bblid'
+
+#rownames(soc_df) <- 1:nrow(soc_df)
+
+	
+##### Remove BBLIDs from dataframe that are non-sensical, or modify their answers, and then remove subjects that still have missing values
+
+identifyBadSOC <- function(soc_df) { # Get rid of all done before February 2010 (DO IN SCRIPT)
+	soccols <- colnames(soc_df)[grepl("SOC", colnames(soc_df))]
+	for (soccol in soccols) { soc_df[,soccol] <- as.character(soc_df[,soccol]) }
+	soc_df$Mistake <- 0
+	for (i in 1:nrow(soc_df)) {
+		firstvec <- soc_df[i, soccols[1:5]]
+		secondvec <- soc_df[i, soccols[6:13]]
+		if (!("1" %in% firstvec) & ("1" %in% secondvec | "0" %in% secondvec)) { 
+			soc_df[i, "Mistake"] <- 1 
+			next
+		}
+		thirdvec <- soc_df[i, soccols[9:13]]
+		if (soc_df[i, "SOC011"] == '.') { soc_df[i, "SOC011"] <- '0' }
+		if (soc_df[i, "SOC011A"] == '.') { soc_df[i, "SOC011A"] <- '0' }
+		if ((soc_df[i, "SOC007"] != "1" | as.numeric(soc_df[i, "SOC011"]) < 6) & ("1" %in% thirdvec | "0" %in% thirdvec)) {
+			if (as.numeric(soc_df[i, "SOC011A"]) < .5) {
+				soc_df[i, "Mistake"] <- 1 
+				next
+			}
+		}
+	}
+	return(soc_df)
+}
+
+# Remove mistakes between these two
+
+fillInSOC <- function(soc_df) { # Not started
+	#soc_df$SOC001 <- recode(soc_df$SOC001, "'.'='0';'9'='0'")
+	soc_df[soc_df$SOC001 == '.', "SOC001"] <- '0'
+	soc_df[soc_df$SOC001 == '9', "SOC001"] <- '0'
+	#soc_df$SOC002 <- recode(soc_df$SOC002, "'.'='0';'9'='0'")
+	soc_df[soc_df$SOC002 == '.', "SOC002"] <- '0'
+	soc_df[soc_df$SOC002 == '9', "SOC002"] <- '0'
+	#soc_df$SOC003 <- recode(soc_df$SOC003, "'.'='0';'9'='0'")
+	soc_df[soc_df$SOC003 == '.', "SOC003"] <- '0'
+	soc_df[soc_df$SOC003 == '9', "SOC003"] <- '0'
+	#soc_df$SOC004 <- recode(soc_df$SOC004, "'.'='0';'9'='0'")
+	soc_df[soc_df$SOC004 == '.', "SOC004"] <- '0'
+	soc_df[soc_df$SOC004 == '9', "SOC004"] <- '0'
+	#soc_df$SOC005 <- recode(soc_df$SOC005, "'.'='0';'9'='0'")
+	soc_df[soc_df$SOC005 == '.', "SOC005"] <- '0'
+	soc_df[soc_df$SOC005 == '9', "SOC005"] <- '0'
+	#soc_df$SOC007 <- recode(soc_df$SOC007, "'.'='0';'9'='0'")
+	soc_df[soc_df$SOC007 == '.', "SOC007"] <- '0'
+	soc_df[soc_df$SOC007 == '9', "SOC007"] <- '0'
+	#soc_df$SOC008 <- recode(soc_df$SOC008, "'.'='0';'9'='0'")
+	soc_df[soc_df$SOC008 == '.', "SOC008"] <- '0'
+	soc_df[soc_df$SOC008 == '9', "SOC008"] <- '0'
+	#soc_df$SOC016 <- recode(soc_df$SOC016, "'.'='0'")
+	soc_df[soc_df$SOC016 == '.', "SOC016"] <- '0'
+	soc_df[soc_df$SOC016 == '9', "SOC016"] <- '0'
+	return(soc_df)
+}
+
+remakeSOC <- function(soc_df, informant="proband") { # Not started
+	new_df <- data.frame(matrix(NA, nrow=nrow(soc_df), ncol=0))
+	#colnames(new_df) <- c("bblid", "informant", "ITEM029", "ITEM030", "ITEM031", "ITEM032", "ITEM033", "ITEM034", "ITEM35")
+	new_df$bblid <- soc_df$bblid
+	new_df$informant <- informant
+	# ITEM029 (SOC001)
+	new_df$ITEM029 <- soc_df$SOC001
+	# ITEM030 (SOC002)
+	new_df$ITEM030 <- soc_df$SOC002
+	# ITEM031 (SOC003)
+	new_df$ITEM031 <- soc_df$SOC003
+	# ITEM032 (SOC004)
+	new_df$ITEM032 <- soc_df$SOC004
+	# ITEM033 (SOC005)
+	new_df$ITEM033 <- soc_df$SOC005
+	# ITEM034 (SOC006)
+	for (i in 1:nrow(soc_df)) {
+		if (soc_df[i, "SOC007"] != 1) {
+			new_df[i, "ITEM034"] <- 0
+		} else if (soc_df[i, "SOC007"] == 1 & soc_df[i, "SOC008"] !=1) {
+			new_df[i, "ITEM034"] <- 1
+		} else if (soc_df[i, "SOC007"] == 1 & soc_df[i, "SOC008"] ==1) {
+			new_df[i, "ITEM034"] <- 2
+		}
+	}
+	# ITEM035 (SOC016)
+	new_df$ITEM035 <- soc_df$SOC016
+
+	return(new_df)
+}
+
+
+
+
+
+
